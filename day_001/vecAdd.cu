@@ -8,6 +8,14 @@ __global__ void vecAdd(float *A, float *B, float *C, int n){
     }
 }
 
+// code for cuda error handling
+void checkCudaError(cudaError_t err, const char *file, int line){
+    if (err != cudaSuccess){
+        printf("%s in %s at line %d\n", cudaGetErrorString(err), file, line);
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(){
     // declare arrays
     int n = 1000;
@@ -26,19 +34,19 @@ int main(){
 
     // allocate device global memory for vectors.
     float *A_d, *B_d, *C_d;
-    cudaMalloc((void **)&A_d, size);
-    cudaMalloc((void **)&B_d, size);
-    cudaMalloc((void **)&C_d, size);
+    checkCudaError(cudaMalloc((void **)&A_d, size), __FILE__, __LINE__);
+    checkCudaError(cudaMalloc((void **)&B_d, size), __FILE__, __LINE__);
+    checkCudaError(cudaMalloc((void **)&C_d, size), __FILE__, __LINE__);
 
     //copy the vectors  from host to device
-    cudaMemcpy(A_d, A_h, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(B_d, B_h, size, cudaMemcpyHostToDevice);
+    checkCudaError(cudaMemcpy(A_d, A_h, size, cudaMemcpyHostToDevice),  __FILE__, __LINE__);
+    checkCudaError(cudaMemcpy(B_d, B_h, size, cudaMemcpyHostToDevice), __FILE__, __LINE__);
 
     //call the kernel
     vecAdd<<<ceil(n/256.0), 256>>>(A_d, B_d, C_d, n);
 
     //copy the result from device to host
-    cudaMemcpy(C_h, C_d, size, cudaMemcpyDeviceToHost);
+    checkCudaError(cudaMemcpy(C_h, C_d, size, cudaMemcpyDeviceToHost), __FILE__, __LINE__);
 
     //verify the results
     for(int i=0; i<n; i++){
@@ -50,9 +58,9 @@ int main(){
     printf("Vector addition completed successfully! \n");
 
     //Free device memory
-    cudaFree(A_d);
-    cudaFree(B_d);
-    cudaFree(C_d);
+    checkCudaError(cudaFree(A_d), __FILE__, __LINE__);
+    checkCudaError(cudaFree(B_d), __FILE__, __LINE__);
+    checkCudaError(cudaFree(C_d), __FILE__, __LINE__);
 
     //free host memory
     free(A_h);
